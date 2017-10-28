@@ -48,25 +48,17 @@ typedef long long int lli;
 struct tag_type {
     lli from;
     lli to;
-    std::vector<int> primes;
 };
 
 struct tag_type2 {
     lli from;
     lli to;
 	int prime;
-	std::vector<bool> &is_prime;
-
-	tag_type2 (std::vector<bool> &is_prime2) : is_prime(is_prime2) {}
 };
 
 struct tag_type3 {
 	lli to;
 	lli from;
-	std::vector<bool> &is_prime;
-	std::vector<int> primes;
-
-	tag_type3 (std::vector<bool> &is_prime2) : is_prime(is_prime2) {}
 };
 
 struct AddPrimes
@@ -86,30 +78,44 @@ struct CrossPrimes
 
 struct my_context : public CnC::context< my_context >
 {
-    CnC::step_collection< FindPrimes > m_steps;
+    CnC::step_collection< FindPrimes > find_primes;
     CnC::tag_collection<tag_type> m_tags;
-    CnC::step_collection< CrossPrimes > m_steps2;
+    CnC::step_collection< CrossPrimes > cross_primes;
     CnC::tag_collection<tag_type2> m_tags2;
     CnC::tag_collection<tag_type3> m_tags3;
-    CnC::step_collection< AddPrimes > m_steps3;
+    CnC::step_collection< AddPrimes > add_primes;
 
     CnC::item_collection< lli, lli > m_primes;
 	CnC::item_collection< std::pair<lli, int>, bool > m_done;
 
+	CnC::item_collection< int, int > small_primes;
+	CnC::item_collection< lli, bool > is_prime;
+
     my_context() 
         : CnC::context< my_context >(),
-          m_steps( *this ),
-		  m_steps2(*this),
-		  m_steps3(*this),
+          find_primes( *this ),
+		  cross_primes(*this),
+		  add_primes(*this),
           m_tags( *this ),
 		  m_tags2(*this),
 		  m_tags3(*this),
           m_primes( *this ),
-          m_done( *this )
+          m_done( *this ),
+		  small_primes(*this),
+		  is_prime(*this)
     {
-        m_tags.prescribes( m_steps, *this );
-		m_tags2.prescribes(m_steps2, *this);
-		m_tags3.prescribes(m_steps3, *this);
+        m_tags.prescribes( find_primes, *this );
+		m_tags2.prescribes(cross_primes, *this);
+		m_tags3.prescribes(add_primes, *this);
+
+		find_primes.controls(m_tags2);
+		find_primes.controls(m_tags3);
+
+		cross_primes.produces(m_done);
+		cross_primes.produces(is_prime);
+
+		add_primes.consumes(m_done);
+		add_primes.consumes(is_prime);
 
     }
 
@@ -127,21 +133,21 @@ long long int firstMultple(lli n, lli p){
 int FindPrimes::execute(tag_type range, my_context & c) const
 {
     std::vector<bool> is_prime((range.to - range.from) / 2, true);
-        
-    for (int primo : range.primes) {
+    
+	for (auto cii = c.small_primes.begin(); cii != c.small_primes.end(); cii++) {
+		int primo = cii -> first;
         lli first_multiple = firstMultple(range.from, primo);
 		if (first_multiple % 2 == 0) first_multiple += primo;
-        tag_type2 tag(is_prime);
+        tag_type2 tag;
 		tag.from = first_multiple;
 		tag.to = range.to;
 		tag.prime = primo;
 		c.m_tags2.put(tag);
-    }
+	}
 
     
-	tag_type3 tag(is_prime);
+	tag_type3 tag;
 	tag.to = range.to;
-	tag.primes = range.primes;
 	tag.from = range.from;
 	c.m_tags3.put(tag);
     
@@ -149,27 +155,34 @@ int FindPrimes::execute(tag_type range, my_context & c) const
 }
 
 int CrossPrimes::execute(tag_type2 tag, my_context & c) const {
-	for (lli i = tag.from; i < tag.to; i += tag.prime * 2) {
-        tag.is_prime[(i - tag.from - 1) / 2] = false;    
-    }
 
+	for (lli i = tag.from; i < tag.to; i += tag.prime * 2) {
+		bool val;
+		if(c.is_prime.unsafe_get(i, val) == false) {
+			c.is_prime.put(i, false);
+		}
+    }
 	c.m_done.put(std::make_pair(tag.to, tag.prime), true);
 	 
 	return CnC::CNC_Success;
 }
 
 int AddPrimes::execute(tag_type3 tag,  my_context & c) const {
-	for (auto prime : tag.primes) {
+
+	for (auto cii = c.small_primes.begin(); cii != c.small_primes.end(); cii++) {
+		int prime = cii -> first;
 		bool val;
-		printf("execute1");
 		c.m_done.get(std::make_pair(tag.to, prime), val);
-		printf("execute2");
 	}
 
-    for (int i = 0; i < tag.is_prime.size(); i++) {
-		lli num = tag.from + i * 2 + 1;
-        if (tag.is_prime[i] && num > 1) c.m_primes.put(num, num);
-    }
+	for (lli i = tag.from + 1; i < tag.to; i += 2) {
+		try {
+			bool is_prime;
+			c.is_prime.get(i, is_prime);
+		} catch (...) {
+			if (i > 1) c.m_primes.put(i, i);
+		}
+	}
 
 	return CnC::CNC_Success;
 
@@ -222,6 +235,10 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	for (int prime : primes) {
+		c.small_primes.put(prime, prime);
+	}
+
 	if (from % 2 == 1) from -= 1;
 	if (to % 2 == 1) to += 1;
 	range_length *=2;
@@ -230,7 +247,6 @@ int main(int argc, char* argv[])
         tag_type range;
         range.from = i;
         range.to = std::min(i + range_length, to);
-        range.primes = primes;
 		c.m_tags.put(range);
 	}
 

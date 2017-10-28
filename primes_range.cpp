@@ -45,29 +45,38 @@ struct my_context;
 
 typedef long long int lli;
 
-struct tag_type {
+struct range {
     lli from;
     lli to;
-    std::vector<int> primes;
 };
 
 struct FindPrimes
 {
-    int execute(tag_type range, my_context & c ) const;
+    int execute(range range, my_context & c ) const;
 };
 
 struct my_context : public CnC::context< my_context >
 {
-    CnC::step_collection< FindPrimes > m_steps;
-    CnC::tag_collection<tag_type> m_tags;
+    CnC::step_collection< FindPrimes > find_primes;
+    CnC::tag_collection<range> m_tags;
     CnC::item_collection< lli, lli > m_primes;
+
+	CnC::item_collection< int, int > small_primes;
+
     my_context() 
         : CnC::context< my_context >(),
-          m_steps( *this ),
+          find_primes( *this ),
           m_tags( *this ),
-          m_primes( *this )
+          m_primes( *this ),
+		  small_primes(*this)
     {
-        m_tags.prescribes( m_steps, *this );
+        m_tags.prescribes( find_primes, *this );
+		
+		find_primes.consumes(small_primes);
+
+		find_primes.produces(m_primes);
+
+		CnC::debug::collect_scheduler_statistics( *this );
     }
 };
 
@@ -79,17 +88,18 @@ long long int firstMultple(lli n, lli p){
 	return num;
 }
 
-int FindPrimes::execute( tag_type range, my_context & c ) const
+int FindPrimes::execute( range range, my_context & c ) const
 {
     std::vector<bool> is_prime((range.to - range.from) / 2, true);
-        
-    for (int primo : range.primes) {
-        lli first_multiple = firstMultple(range.from, primo);
+    
+	for (auto cii = c.small_primes.begin(); cii != c.small_primes.end(); cii++) {
+		int primo = cii -> first;
+		lli first_multiple = firstMultple(range.from, primo);
 		if (first_multiple % 2 == 0) first_multiple += primo;
         for (lli i = first_multiple; i < range.to; i += primo * 2) {
             is_prime[(i - range.from - 1) / 2] = false;    
         }
-    }
+	}
     
     for (int i = 0; i < is_prime.size(); i++) {
 		lli num = range.from + i * 2 + 1;
@@ -138,13 +148,17 @@ int main(int argc, char* argv[])
 	int raiz = floor(sqrt(to)); 
 
 	std::vector<bool> is_prime(ceil(raiz / 2) + 1, true);
-	std::vector<int> primes;
+	std::vector<int> small_primes;
 
 	for (int i = 3; i <= raiz; i += 2) {
 		if (is_prime[(i - 1) / 2]) {
-			primes.push_back(i);
+			small_primes.push_back(i);
 			for (int j = i * i; j <= raiz; j+= i*2) is_prime[(j - 1) / 2] = false;
 		}
+	}
+
+	for (auto prime : small_primes) {
+		c.small_primes.put(prime, prime);
 	}
 
 	if (from % 2 == 1) from -= 1;
@@ -152,10 +166,9 @@ int main(int argc, char* argv[])
 	range_length *=2;
 
 	for (lli i = from; i < to; i+= range_length) {
-        tag_type range;
+        range range;
         range.from = i;
         range.to = std::min(i + range_length, to);
-        range.primes = primes;
 		c.m_tags.put(range);
 	}
 
