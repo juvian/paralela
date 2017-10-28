@@ -26,15 +26,16 @@
 	 \csname lst@SetFirstLabel\endcsname}
 	{\csname lst@SaveFirstLabel\endcsname}
 \lstset{% general command to set parameter(s)
-	language=C++, basicstyle=\footnotesize\ttfamily, keywordstyle=\slshape,
+	language=Python, basicstyle=\footnotesize\ttfamily, keywordstyle=\slshape,
 	emph=[1]{tipo,usa}, emphstyle={[1]\sffamily\bfseries},
 	morekeywords={tint,forn,forsn},
 	basewidth={0.47em,0.40em},
 	columns=fixed, fontadjust, resetmargins, xrightmargin=5pt, xleftmargin=15pt,
 	flexiblecolumns=false, tabsize=2, breaklines,	breakatwhitespace=false, extendedchars=true,
 	numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=9pt,
-	frame=l, framesep=3pt,
+	frame=l, framesep=3pt, escapeinside={(*}{*)},
 }
+
 \usepackage{multicol}
 
 \usepackage[spanish]{babel}
@@ -125,7 +126,7 @@
   \begin{itemize}
     \setlength\itemsep{1em}
     \item<1-> La criba conviene usarla cuando se desea calcular todos los primos desde 1 hasta N.
-    \item<2-> ?` Pero qué pasa si queremos calcular los primos entre X e Y ?
+    \item<2-> ?` Pero qué pasa si queremos calcular los primos entre X e Z ?
     \item<3-> \textbf{La criba común no es la mejor elección.}
   \end{itemize}
 \end{frame}
@@ -133,7 +134,7 @@
 \begin{frame}{Introducci\'on al problema}
   \begin{enumerate}
     \setlength\itemsep{1em}
-    \item<1-> El algoritmo calcula todos los primos entre 1 e Y.
+    \item<1-> El algoritmo calcula todos los primos entre 1 e Z.
     \item<2-> Desaprovechamos la propiedad matemática que dice que necesitamos solamente los primos hasta la raiz cuadrada de un número para determinar su primalidad.
     \item<3-> Es un algoritmo completamente secuencial.
   \end{enumerate}
@@ -150,24 +151,61 @@
 \begin{frame}[fragile]{Paralelismo Versión 1}
   \begin{itemize}
     \setlength\itemsep{1em}
-    \item<1-> Probar para cada número entre X e Y con el algoritmo naive.
+    \item<1-> Proponemos el siguiente algoritmo naive que cuenta la cantidad de primos entre un número X e Z con un algoritmo naive.
     \item<2->
-     \begin{algorithm}[H]
-        \caption{Text Summarization Algorithm}\label{euclid}
-        \begin{algorithmic}[1]
-            \Procedure{Primes between X and Y}{}\newline
-            \textbf{Input:} X, Y.\newline
-            \textbf{Output:} Number of primes between X and Y.
-            \State{\textbf{forall X $\leq$ i $\leq$ Y}}
-            \EndProcedure
-        \end{algorithmic}
-        \label{alg_1}
-      \end{algorithm}
-
+     \begin{lstlisting}
+        (*\bfseries dep:*) D(j) -> Y(j, i)
+        (*\bfseries dep:*) Y(j,i) -> L(i)
+        (*\bfseries dep:*) L(i) -> C
+        (*\bfseries forall:*)(* X $\leq$ i $\leq$ Z *) 
+          (*\bfseries par*)
+            (*\bfseries forall:*) (*2 $\leq$ j $\leq$ $\sqrt{i}$*)
+              D: d = j  
+            (*\bfseries forall:*) d
+              Y: y = (*\textit{divides}*)(d, i)
+            L: l = !(*\textit{any}*)(y)
+        C: (*\textit{count}*)(l)
+    \end{lstlisting}  
+    \item<3-> Como optimización se puede contemplar únicamente números impares entre los candidatos a divisores.        
   \end{itemize}
 \end{frame}
 
 
+\begin{frame}[fragile]{Paralelismo Versión 2}
+  \begin{itemize}
+    \setlength\itemsep{1em}
+    \item<1-> El siguiente algoritmo busca usar únicamente los primos hasta $\sqrt{Z}$ como posibles divisores.
+    \item<2->
+     \begin{lstlisting}
+        seq
+          P: p = (*\textit{primes}(1, $\sqrt{Z}$)*)
+          (*\bfseries forall:*)(* X $\leq$ i $\leq$ Z *) 
+            (*\bfseries forall:*) p
+              Y: y = (*\textit{divides}*)(p, i)
+            L: l = !(*\textit{any}*)(y)
+          C: (*\textit{count}*)(l)
+    \end{lstlisting}
+    \item<3-> En este caso, \textit{primes} es una función legacy que calcula los primos hasta la raiz, que si es lo suficientemente rápida genera mucha menor carga en la siguiente parte del algoritmo.          
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Paralelismo Versión 3}
+  \begin{itemize}
+    \setlength\itemsep{1em}
+    \item<1-> En lugar de para cada número tratar de ver si es primo, hacer como la criba y marcar para cada número entre X e Y si uno lo divide.
+    \item<2-> Uso de chunking para ganar velocidad.
+    \item<3-> En pseudo FXML:
+      \begin{lstlisting}
+          P =(*\textit{primes}(1, $\sqrt{Z}$)*)
+          Parto el espacio en ((Z - X) / chunksize) chunks de tamano chunksize
+          (*\bfseries forall:*) chunk
+            (*\bfseries forall:*) P
+              Y: y = (*\textit{mark\_multiples\_in}*)(chunk, P)
+            T: t = (*\textit{sum}*)(y)
+          C = (*\textit{sum}*)(t)
+      \end{lstlisting}
+  \end{itemize}
+\end{frame}
 \begin{frame}
   \begin{center}
 
