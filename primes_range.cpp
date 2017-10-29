@@ -76,7 +76,7 @@ struct my_context : public CnC::context< my_context >
 
 		find_primes.produces(m_primes);
 
-		CnC::debug::collect_scheduler_statistics( *this );
+		//CnC::debug::collect_scheduler_statistics( *this );
     }
 };
 
