@@ -192,7 +192,7 @@
 \begin{frame}[fragile]{Paralelismo Versión 3}
   \begin{itemize}
     \setlength\itemsep{1em}
-    \item<1-> En lugar de para cada número tratar de ver si es primo, hacer como la criba y marcar para cada número entre X e Y si uno lo divide.
+    \item<1-> En lugar de para cada número tratar de ver si es primo, hacer como la criba y marcar para cada número entre X e Z si uno lo divide.
     \item<2-> Uso de chunking para ganar velocidad.
     \item<3-> En pseudo FXML:
       \begin{lstlisting}
@@ -236,6 +236,22 @@
   {2 cores, 2 logical processors}
   \\
   \includegraphics[width=1.15\textwidth]{imagenes/principioLucas.png}%
+  \end{center}
+\end{frame}
+
+\begin{frame}{Primos en rangos}
+  \begin{center}
+  {4 cores, 8 logical processors}
+  \\
+  \includegraphics[width=1.15\textwidth]{imagenes/julian_rangos.png}%
+  \end{center}
+\end{frame}
+
+\begin{frame}{Primos en rangos}
+  \begin{center}
+  {2 cores, 2 logical processors}
+  \\
+  \includegraphics[width=1.15\textwidth]{imagenes/lucas_rangos.png}%
   \end{center}
 \end{frame}
 
