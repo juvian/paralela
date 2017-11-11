@@ -122,16 +122,16 @@ int main(int argc, char* argv[])
 	int range_length = 10000;
 
 	if (argc == 4) {
-		range_length = atoi(argv[3]);
+		range_length = atol(argv[3]);
 	}
     if (argc >= 3) 
     {
-        from = atoi(argv[1]);
-		to = atoi(argv[2]);
+        from = atol(argv[1]);
+		to = atol(argv[2]);
     }
     if (argc == 2)
     {
-        to = atoi(argv[1]);
+        to = atol(argv[1]);
     }
     if(argc <= 1 || argc > 4)
     {
@@ -141,7 +141,7 @@ int main(int argc, char* argv[])
 	//CnC::debug::set_num_threads(3);
     my_context c;
 
-    printf("Determining primes from %d-%d \n", from, to);
+    printf("Determining primes from %lld-%lld \n", from, to);
 
     tbb::tick_count t0 = tbb::tick_count::now();
 

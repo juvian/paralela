@@ -2,7 +2,7 @@
 #include <vector>
 #include <chrono>
 #include <cmath>
-#include <stdlib.h>     /* atoi */
+#include <stdlib.h>     /* atol */
 
 #define tiempo std::chrono::high_resolution_clock::now
 using namespace std;
@@ -11,8 +11,8 @@ int main (int argc, char* argv[]) {
 	long long int to = 1000;
     if (argc >= 3) 
     {
-        from = atoi(argv[1]);
-		to = atoi(argv[2]);
+        from = atol(argv[1]);
+		to = atol(argv[2]);
     }
 	auto start = tiempo();
 	if (from % 2 == 0) from++;

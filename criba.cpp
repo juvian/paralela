@@ -5,7 +5,7 @@
 using namespace std;
 int main () {
 
-	long long int to = 1000000;
+	long long int to = 50000000;
 
 	std::vector<bool> is_prime(to, true);
 	std::vector<int> primes;
