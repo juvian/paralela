@@ -126,8 +126,8 @@ int main(int argc, char* argv[])
 	}
     if (argc >= 3) 
     {
-        from = atol(argv[1]);
-		to = atol(argv[2]);
+        from = _atoi64(argv[1]);
+		to = _atoi64(argv[2]);
     }
     if (argc == 2)
     {
@@ -146,14 +146,13 @@ int main(int argc, char* argv[])
     tbb::tick_count t0 = tbb::tick_count::now();
 
 	int raiz = floor(sqrt(to)); 
-
 	std::vector<bool> is_prime(ceil(raiz / 2) + 1, true);
 	std::vector<int> small_primes;
 
-	for (int i = 3; i <= raiz; i += 2) {
+	for (lli i = 3; i <= raiz; i += 2) {
 		if (is_prime[(i - 1) / 2]) {
 			small_primes.push_back(i);
-			for (int j = i * i; j <= raiz; j+= i*2) is_prime[(j - 1) / 2] = false;
+			for (lli j = i * i; j <= raiz; j+= i*2) is_prime[(j - 1) / 2] = false;
 		}
 	}
 
