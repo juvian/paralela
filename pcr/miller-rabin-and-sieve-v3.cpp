@@ -68,31 +68,31 @@ bool rabin (ll n){ //devuelve true si n es primo
 
 long long int firstMultiple(ll n, ll p){
     ll num = n - n % p;
-	if (num < n || num == 0) num += p;
-	if (num == p) num += p;
-	return num;
+    if (num < n || num == 0) num += p;
+    if (num == p) num += p;
+    return num;
 }
 
 inline void _criba(pcr_read<numPair>& m, pcr_write<num_t>& o) {
-	numPair sarasa = m;
-	range range; range.from = sarasa.first; range.to = sarasa.second;
-	long long cuenta = 0;
+    numPair sarasa = m;
+    range range; range.from = sarasa.first; range.to = sarasa.second;
+    long long cuenta = 0;
     std::vector<bool> is_prime((range.to - range.from) / 2, true);
     
-	for (auto cii = small_primes.begin(); cii != small_primes.end(); cii++) {
-		int primo = *cii;
-		num_t first_multiple = firstMultiple(range.from, primo);
-		if (first_multiple % 2 == 0) first_multiple += primo;
+    for (auto cii = small_primes.begin(); cii != small_primes.end(); cii++) {
+        int primo = *cii;
+        num_t first_multiple = firstMultiple(range.from, primo);
+        if (first_multiple % 2 == 0) first_multiple += primo;
         for (num_t i = first_multiple; i < range.to; i += primo * 2) {
             is_prime[(i - range.from - 1) / 2] = false;    
         }
-	}
+    }
 
-	for (int i = 0; i < is_prime.size(); i++) {
-		num_t num = range.from + i * 2 + 1;
+    for (int i = 0; i < is_prime.size(); i++) {
+        num_t num = range.from + i * 2 + 1;
         if (is_prime[i] && num > 1) {
-			o = num;
-		}
+            o = num;
+        }
     }
 }
 
@@ -105,63 +105,77 @@ inline int _count(pcr_read<bool>& b, int& r) {
 void rangos(pcr_read<numPair> & N, pcr_write<numPair>& O) {
     numPair t = N;
     for (num_t i = t.first; i < t.second; i+= range_length) {
-		O = make_pair(i, std::min(i + range_length, t.second));
-	}
+        O = make_pair(i, std::min(i + range_length, t.second));
+    }
 }
 
 inline bool _determine(pcr_read<num_t>& pr) {
-	num_t num = pr;
-	if (num <= MAX_CRIBA * MAX_CRIBA) {
-		return true;
-	} else {
-		return rabin(num);
-	}
+    num_t num = pr;
+    if (num <= MAX_CRIBA * MAX_CRIBA) {
+        return true;
+    } else {
+        return rabin(num);
+    }
 }
 
+inline int _count2(pcr_read<int>& b, int& r) {
+    if (b.idx() == 1) r = 0;
+    r += int(b);
+    return false;
+}
 
 typedef producer<decltype(&rangos), &rangos>                    Rangos;
-typedef unordered_consumer<decltype(&_criba), &_criba>      	Criba;
+typedef producer<decltype(&_criba), &_criba>                    Criba;
 typedef unordered_consumer<decltype(&_determine), &_determine>  DeterminarSiSonONo;
 typedef reducer<decltype(&_count), &_count>                     Count;
+typedef reducer<decltype(&_count2), &_count2>                   Count2;
 
 typedef pcr<
-    pcr_in<vector<numPair>>,
-    pcr_produce<Rangos, 1>,
-    pcr_consume<Criba, 1>,
+    pcr_in<numPair>,
+    pcr_produce<Criba, 1>,
     pcr_consume<DeterminarSiSonONo, 1>,
     pcr_reduce<Count,1>
+> CalcularRango;
+
+typedef pcr<
+    pcr_in<numPair>,
+    pcr_produce<Rangos, 1>,
+    pcr_consume<CalcularRango, 1>,
+    pcr_reduce<Count2, 1>
 > countprimes;
 
 int main(int argc, char **argv) {
     if (argc < 3) return 1;
-
+    tbb::tick_count t0 = tbb::tick_count::now();
     pcr_impl<countprimes> p;
     CnC::debug::collect_scheduler_statistics(p.context) ;
-
-    // Will count odd primer lesser than n
-    long long left = atol(argv[1]);
-    long long n = atol(argv[2]);
+    
+    // Will count odd primer less than n
+    long long from = atol(argv[1]);
+    long long to = atol(argv[2]);
 
     int raiz = std::min((num_t) int(floor(sqrt(to))), MAX_CRIBA); 
-	vector<bool> is_prime(ceil(raiz / 2) + 1, true);
+    vector<bool> is_prime(ceil(raiz / 2) + 1, true);
 
-	for (num_t i = 3; i <= raiz; i += 2) {
-		if (is_prime[(i - 1) / 2]) {
-			small_primes.push_back(i);
-			for (num_t j = i * i; j <= raiz; j+= i*2) is_prime[(j - 1) / 2] = false;
-		}
-	}
+    for (num_t i = 3; i <= raiz; i += 2) {
+        if (is_prime[(i - 1) / 2]) {
+            small_primes.push_back(i);
+            for (num_t j = i * i; j <= raiz; j+= i*2) is_prime[(j - 1) / 2] = false;
+        }
+    }
 
-	if (from % 2 == 1) from -= 1;
-	if (to % 2 == 1) to += 1;
-	range_length *=2;
+    if (from % 2 == 1) from -= 1;
+    if (to % 2 == 1) to += 1;
+    range_length *=2;
 
     p(make_pair(from, to));
 
     p.wait();
+    tbb::tick_count t1 = tbb::tick_count::now();
     auto it = p.val_begin();
     while (it != p.val_end()) {
-        std::cout << "There are " << *it << " odd primes smaller than " << argv[2] << std::endl;
+        std::cout << "There are " << *it << " odd primes in the range " << from << "-" << to << std::endl;
+        printf("Found primes in %g seconds\n", (t1-t0).seconds());
         ++it;
     }
 
